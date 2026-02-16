@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 { font-size: 2rem; margin-bottom: 1.5rem; color: #7dd3fc; }
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .row { display: flex; gap: .75rem; margin-bottom: 1rem; }
+    input[type=text], select {
+      flex: 1;
+      padding: .6rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+    button {
+      padding: .6rem 1.4rem;
+      border: none;
+      border-radius: 8px;
+      background: #3b82f6;
+      color: white;
+      cursor: pointer;
+    }
+    .task {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .75rem 1rem;
+      border-radius: 8px;
+      background: #0f172a;
+      margin-bottom: .5rem;
+    }
+    .task .title { flex: 1; }
+    .badge { font-size: .75rem; padding: .2rem .6rem; border-radius: 999px; }
+    .badge.low    { background:#14532d; color:#86efac; }
+    .badge.medium { background:#713f12; color:#fde68a; }
+    .badge.high   { background:#7f1d1d; color:#fca5a5; }
+    .done .title  { text-decoration: line-through; opacity: .5; }
+    .del-btn { background: #ef4444; padding: .4rem .8rem; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <h1>📋 TaskApp</h1>
+  <div class="card">
+    <div class="row">
+      <input type="text" id="taskInput" placeholder="New task..." />
+      <select id="prioritySelect">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+      </select>
+      <button onclick="addTask()">Add</button>
+    </div>
+    <div id="status">Loading...</div>
+  </div>
+  <div class="card">
+    <div id="taskList"></div>
+  </div>
+  <script>
+    const API = '/api/tasks';
+    async function loadTasks() {
+      const res = await fetch(API);
+      const tasks = await res.json();
+      const list = document.getElementById('taskList');
+      list.innerHTML = '';
+      tasks.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'task' + (t.done ? ' done' : '');
+        div.innerHTML = `
+          <input type="checkbox" ${t.done ? 'checked' : ''}
+                 onchange="toggleTask(${t.id}, this.checked)" />
+          <span class="title">${t.title}</span>
+          <span class="badge ${t.priority}">${t.priority}</span>
+          <button class="del-btn" onclick="deleteTask(${t.id})">✕</button>`;
+        list.appendChild(div);
+      });
+      document.getElementById('status').textContent = `${tasks.length} task(s)`;
+    }
+    async function addTask() {
+      const title = document.getElementById('taskInput').value.trim();
+      const priority = document.getElementById('prioritySelect').value;
+      if (!title) return;
+      await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, priority })
+      });
+      document.getElementById('taskInput').value = '';
+      loadTasks();
+    }
+    async function toggleTask(id, done) {
+      await fetch(`${API}/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done })
+      });
+      loadTasks();
+    }
+    async function deleteTask(id) {
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      loadTasks();
+    }
+    loadTasks();
+  </script>
+</body>
+</html>
